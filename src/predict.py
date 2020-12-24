@@ -13,11 +13,11 @@ import cv2
 import numpy as np
 
 VOC_CLASSES = (    # always index 0
-    'aeroplane', 'bicycle', 'bird', 'boat',
-    'bottle', 'bus', 'car', 'cat', 'chair',
-    'cow', 'diningtable', 'dog', 'horse',
-    'motorbike', 'person', 'pottedplant',
-'sheep', 'sofa', 'train', 'tvmonitor')
+    'OK', 'NG', '', '',
+    '', '', '', '', '',
+    '', '', '', '',
+    '', '', '',
+'', '', '', '')
 
 Color = [[0, 0, 0],
                     [128, 0, 0],
@@ -79,6 +79,10 @@ def decoder(pred):
                         boxes.append(box_xy.view(1,4))
                         cls_indexs.append(cls_index)
                         probs.append(contain_prob*max_prob)
+    _cls_indexs = torch.Tensor(len(cls_indexs))
+    for i in range(len(cls_indexs)):
+        _cls_indexs[i] = cls_indexs[i]
+    cls_indexs = _cls_indexs
     if len(boxes) ==0:
         boxes = torch.zeros((1,4))
         probs = torch.zeros(1)
@@ -86,11 +90,11 @@ def decoder(pred):
     else:
         boxes = torch.cat(boxes,0) #(n,4)
         probs = torch.cat(probs,0) #(n,)
-        cls_indexs = torch.cat(cls_indexs,0) #(n,)
+        # cls_indexs = torch.cat(cls_indexs,torch.tensor([0])) #(n,)
     keep = nms(boxes,probs)
     return boxes[keep],cls_indexs[keep],probs[keep]
 
-def nms(bboxes,scores,threshold=0.5):
+def nms(bboxes,scores,threshold=0.2):
     '''
     bboxes(tensor) [N,4]
     scores(tensor) [N,]
@@ -104,7 +108,9 @@ def nms(bboxes,scores,threshold=0.5):
     _,order = scores.sort(0,descending=True)
     keep = []
     while order.numel() > 0:
-        i = order[0]
+        if len(order.size()) == 0:
+            break
+        i = order[0].item()
         keep.append(i)
 
         if order.numel() == 1:
@@ -165,10 +171,10 @@ def predict_gpu(model,image_name,root_path=''):
 if __name__ == '__main__':
     model = resnet50()
     print('load model...')
-    model.load_state_dict(torch.load('best.pth'))
+    model.load_state_dict(torch.load('/res/yolo.pth'))
     model.eval()
     model.cuda()
-    image_name = 'dog.jpg'
+    image_name = '/tmp/test.jpg'
     image = cv2.imread(image_name)
     print('predicting...')
     result = predict_gpu(model,image_name)
